@@ -124,6 +124,7 @@ export default function FocusTube() {
   const [playerReady, setPlayerReady] = useState(false);
   const [customUrl, setCustomUrl] = useState("");
   const [showCustom, setShowCustom] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const playerRef = useRef(null);
   const intervalRef = useRef(null);
   const containerRef = useRef(null);
@@ -139,6 +140,7 @@ export default function FocusTube() {
         if (data.notes) setNotes(data.notes);
         if (data.currentVideo !== undefined) setCurrentVideo(data.currentVideo);
         if (data.playbackSpeed) setPlaybackSpeed(data.playbackSpeed);
+        if (data.sidebarCollapsed !== undefined) setSidebarCollapsed(data.sidebarCollapsed);
       }
     } catch (e) { /* ignore */ }
   }, []);
@@ -146,9 +148,9 @@ export default function FocusTube() {
   // Save progress
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ progress, completed, notes, currentVideo, playbackSpeed }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ progress, completed, notes, currentVideo, playbackSpeed, sidebarCollapsed }));
     } catch (e) { /* ignore */ }
-  }, [progress, completed, notes, currentVideo, playbackSpeed]);
+  }, [progress, completed, notes, currentVideo, playbackSpeed, sidebarCollapsed]);
 
   // Load YouTube IFrame API
   useEffect(() => {
@@ -348,7 +350,7 @@ export default function FocusTube() {
       {/* Main Content */}
       <div style={{
         display: "flex", flex: 1, position: "relative", zIndex: 5,
-        flexDirection: "row",
+        flexDirection: "row", overflow: "hidden",
       }}>
         {/* Video + Notes Area */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -408,15 +410,57 @@ export default function FocusTube() {
           )}
         </div>
 
+        {/* Sidebar Toggle Button */}
+        <button
+          onClick={() => setSidebarCollapsed((prev) => !prev)}
+          title={sidebarCollapsed ? "Show playlist" : "Hide playlist"}
+          style={{
+            position: "absolute",
+            right: sidebarCollapsed ? 0 : 340,
+            top: 12,
+            zIndex: 20,
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "rgba(255,255,255,0.5)",
+            width: 28,
+            height: 28,
+            borderRadius: sidebarCollapsed ? "6px 0 0 6px" : "6px 0 0 6px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 14,
+            transition: "right 0.3s ease, background 0.2s ease, color 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(232,197,71,0.15)";
+            e.currentTarget.style.color = "#E8C547";
+            e.currentTarget.style.borderColor = "rgba(232,197,71,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+          }}
+        >
+          {sidebarCollapsed ? "◀" : "▶"}
+        </button>
+
         {/* Sidebar: Playlist */}
         <div style={{
-          width: 340, borderLeft: "1px solid rgba(255,255,255,0.04)",
+          width: sidebarCollapsed ? 0 : 340,
+          minWidth: 0,
+          borderLeft: sidebarCollapsed ? "none" : "1px solid rgba(255,255,255,0.04)",
           display: "flex", flexDirection: "column", flexShrink: 0,
           background: "rgba(255,255,255,0.01)",
+          overflow: "hidden",
+          transition: "width 0.3s ease",
         }}>
           {/* Series Header */}
           <div style={{
             padding: "16px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)",
+            whiteSpace: "nowrap",
           }}>
             <div style={{
               fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
@@ -469,6 +513,7 @@ export default function FocusTube() {
                     padding: "12px 16px 12px 14px",
                     transition: "all 0.15s ease",
                     display: "flex", gap: 10, alignItems: "flex-start",
+                    whiteSpace: "nowrap",
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.03)";
@@ -525,6 +570,7 @@ export default function FocusTube() {
             padding: "12px 18px", borderTop: "1px solid rgba(255,255,255,0.04)",
             fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
             color: "rgba(255,255,255,0.2)", lineHeight: 1.8,
+            whiteSpace: "nowrap",
           }}>
             <span style={{ letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, display: "block" }}>
               Shortcuts
