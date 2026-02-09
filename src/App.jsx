@@ -118,6 +118,10 @@ export default function FocusTube() {
   const [completed, setCompleted] = useState({});
   const [notes, setNotes] = useState({});
   const [showNotes, setShowNotes] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaries, setSummaries] = useState({});
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -240,6 +244,29 @@ export default function FocusTube() {
     }
   };
 
+  const fetchSummary = async (videoId) => {
+    if (summaries[videoId]) {
+      setShowSummary(true);
+      return;
+    }
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setShowSummary(true);
+    try {
+      const res = await fetch(`/api/summary/${videoId}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Request failed" }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setSummaries((prev) => ({ ...prev, [videoId]: { text: data.summary, obsidianPath: data.obsidian_path } }));
+    } catch (e) {
+      setSummaryError(e.message);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   const totalVideos = SERIES.videos.length;
   const completedCount = SERIES.videos.filter((v) => completed[v.id]).length;
   const totalDuration = SERIES.videos.reduce((acc, v) => acc + parseDuration(v.duration), 0);
@@ -299,6 +326,19 @@ export default function FocusTube() {
             }}
           >
             ✎ Notes
+          </button>
+          <button
+            onClick={() => fetchSummary(SERIES.videos[currentVideo].id)}
+            style={{
+              background: showSummary ? "rgba(232,197,71,0.15)" : "rgba(255,255,255,0.04)",
+              border: showSummary ? "1px solid rgba(232,197,71,0.3)" : "1px solid rgba(255,255,255,0.08)",
+              color: showSummary ? "#E8C547" : "rgba(255,255,255,0.5)",
+              padding: "6px 14px", borderRadius: 6, cursor: "pointer",
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+              letterSpacing: 0.5, transition: "all 0.2s ease",
+            }}
+          >
+            ∑ Summary
           </button>
           <button
             onClick={() => setShowCustom(!showCustom)}
@@ -406,6 +446,79 @@ export default function FocusTube() {
           {showNotes && (
             <div style={{ padding: "16px 24px", flex: 1, minHeight: 200 }}>
               <NotesPanel videoId={video.id} notes={notes} onSave={handleNoteSave} />
+            </div>
+          )}
+
+          {/* Summary Panel (below video) */}
+          {showSummary && (
+            <div style={{
+              padding: "16px 24px", flex: 1, minHeight: 200,
+              borderTop: "1px solid rgba(255,255,255,0.04)",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                  letterSpacing: 1.5, textTransform: "uppercase", color: "rgba(255,255,255,0.4)",
+                }}>
+                  Summary
+                </span>
+                <button
+                  onClick={() => setShowSummary(false)}
+                  style={{
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.4)", padding: "4px 10px", borderRadius: 4,
+                    cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              {summaryLoading && (
+                <div style={{
+                  color: "rgba(255,255,255,0.4)", fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 13, padding: "24px 0", textAlign: "center",
+                }}>
+                  <span style={{ display: "inline-block", animation: "pulse 1.5s ease-in-out infinite" }}>
+                    Fetching transcript &amp; generating summary…
+                  </span>
+                  <style>{`@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }`}</style>
+                </div>
+              )}
+              {summaryError && (
+                <div style={{
+                  color: "#E85454", fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 13, padding: "12px 16px", background: "rgba(232,84,84,0.08)",
+                  borderRadius: 6, border: "1px solid rgba(232,84,84,0.2)",
+                }}>
+                  {summaryError}
+                </div>
+              )}
+              {summaries[video.id] && !summaryLoading && (
+                <>
+                  {summaries[video.id].obsidianPath && (
+                    <div style={{
+                      marginBottom: 10, fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11, color: "rgba(136,108,196,0.8)",
+                      display: "flex", alignItems: "center", gap: 6,
+                    }}>
+                      <span style={{
+                        display: "inline-block", width: 6, height: 6, borderRadius: "50%",
+                        background: "#886CC4",
+                      }} />
+                      Saved to Obsidian
+                    </div>
+                  )}
+                  <div style={{
+                    color: "rgba(255,255,255,0.85)", fontFamily: "'IBM Plex Sans', sans-serif",
+                    fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap",
+                    background: "rgba(255,255,255,0.02)", borderRadius: 8,
+                    padding: 20, border: "1px solid rgba(255,255,255,0.05)",
+                    maxHeight: 500, overflowY: "auto",
+                  }}>
+                    {summaries[video.id].text}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
