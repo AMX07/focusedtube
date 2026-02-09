@@ -1,0 +1,11 @@
+[project]
+name = "focusedtube"
+version = "0.1.0"
+description = "Distraction-free YouTube learning with transcript summaries"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.6",
+    "youtube-transcript-api>=1.0.3",
+    "anthropic>=0.42.0",
+]
