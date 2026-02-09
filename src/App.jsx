@@ -259,7 +259,7 @@ export default function FocusTube() {
         throw new Error(err.detail || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      setSummaries((prev) => ({ ...prev, [videoId]: data.summary }));
+      setSummaries((prev) => ({ ...prev, [videoId]: { text: data.summary, obsidianPath: data.obsidian_path } }));
     } catch (e) {
       setSummaryError(e.message);
     } finally {
@@ -494,15 +494,30 @@ export default function FocusTube() {
                 </div>
               )}
               {summaries[video.id] && !summaryLoading && (
-                <div style={{
-                  color: "rgba(255,255,255,0.85)", fontFamily: "'IBM Plex Sans', sans-serif",
-                  fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap",
-                  background: "rgba(255,255,255,0.02)", borderRadius: 8,
-                  padding: 20, border: "1px solid rgba(255,255,255,0.05)",
-                  maxHeight: 500, overflowY: "auto",
-                }}>
-                  {summaries[video.id]}
-                </div>
+                <>
+                  {summaries[video.id].obsidianPath && (
+                    <div style={{
+                      marginBottom: 10, fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11, color: "rgba(136,108,196,0.8)",
+                      display: "flex", alignItems: "center", gap: 6,
+                    }}>
+                      <span style={{
+                        display: "inline-block", width: 6, height: 6, borderRadius: "50%",
+                        background: "#886CC4",
+                      }} />
+                      Saved to Obsidian
+                    </div>
+                  )}
+                  <div style={{
+                    color: "rgba(255,255,255,0.85)", fontFamily: "'IBM Plex Sans', sans-serif",
+                    fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap",
+                    background: "rgba(255,255,255,0.02)", borderRadius: 8,
+                    padding: 20, border: "1px solid rgba(255,255,255,0.05)",
+                    maxHeight: 500, overflowY: "auto",
+                  }}>
+                    {summaries[video.id].text}
+                  </div>
+                </>
               )}
             </div>
           )}

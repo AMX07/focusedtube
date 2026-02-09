@@ -1,4 +1,7 @@
 import os
+import re
+from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -14,6 +17,7 @@ app.add_middleware(
 )
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+OBSIDIAN_VAULT = Path(os.environ.get("OBSIDIAN_VAULT", os.path.expanduser("~/obsidian-vault/FocusTube")))
 
 SUMMARY_PROMPT = """You are given the full transcript of a YouTube video.
 Produce a structured summary with the following sections:
@@ -74,4 +78,37 @@ async def get_summary(video_id: str):
             detail=f"LLM summarization failed: {str(e)}",
         )
 
-    return {"video_id": video_id, "summary": summary}
+    # Auto-save to Obsidian vault
+    saved_path = save_to_obsidian(video_id, summary)
+
+    return {"video_id": video_id, "summary": summary, "obsidian_path": saved_path}
+
+
+def save_to_obsidian(video_id: str, summary: str, title: str | None = None) -> str | None:
+    """Save a summary as a Markdown file in the Obsidian vault."""
+    try:
+        OBSIDIAN_VAULT.mkdir(parents=True, exist_ok=True)
+
+        # Use title if provided, otherwise derive from video_id
+        if title:
+            safe_name = re.sub(r'[\\/*?:"<>|]', "", title)[:80]
+        else:
+            safe_name = video_id
+
+        filename = f"{safe_name}.md"
+        filepath = OBSIDIAN_VAULT / filename
+
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+        frontmatter = (
+            f"---\n"
+            f"video_id: {video_id}\n"
+            f"url: https://www.youtube.com/watch?v={video_id}\n"
+            f"date: {now}\n"
+            f"tags: [focustube, summary]\n"
+            f"---\n\n"
+        )
+
+        filepath.write_text(frontmatter + summary, encoding="utf-8")
+        return str(filepath)
+    except Exception:
+        return None
